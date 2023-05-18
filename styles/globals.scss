@@ -1,0 +1,262 @@
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600&family=Manrope:wght@400;700&display=swap");
+$primary: #003647;
+$secondary: #81c2c0;
+
+$input-btn-focus-box-shadow: none;
+$input-btn-focus-width: 0;
+
+$btn-focus-box-shadow: none;
+
+// Configuration
+@import "functions";
+@import "variables";
+@import "mixins";
+@import "utilities";
+
+.bs {
+  // Layout & components
+  @import "root";
+  @import "reboot";
+  @import "type";
+  @import "images";
+  @import "containers";
+  @import "grid";
+  @import "tables";
+  @import "forms";
+  @import "buttons";
+  @import "transitions";
+  @import "dropdown";
+  @import "button-group";
+  @import "nav";
+  @import "navbar";
+  @import "card";
+  @import "accordion";
+  @import "breadcrumb";
+  @import "pagination";
+  @import "badge";
+  @import "alert";
+  @import "progress";
+  @import "list-group";
+  @import "close";
+  @import "toasts";
+  @import "carousel";
+  @import "spinners";
+  @import "offcanvas";
+
+  // // Helpers
+  @import "helpers";
+
+  // // Utilities
+  @import "utilities/api";
+
+  .container {
+    height: auto;
+  }
+  label {
+    margin: 0;
+  }
+
+  .btn {
+    font-family: "Barlow Condensed";
+    font-style: normal;
+  }
+}
+
+@import "modal";
+@import "tooltip";
+@import "popover";
+
+.is-authenticated {
+  #schedule-demo {
+    display: none;
+  }
+
+  // .section-5{
+  //     display: none;
+  // }
+}
+
+*,
+*:before,
+*:after {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  position: relative;
+  margin: 0;
+  //   padding-bottom: 4rem;
+  min-height: 100%;
+}
+
+.container {
+  height: auto;
+}
+
+.w-nav{
+  background-color: #003647 !important;
+}
+.navbar-2{
+  height: auto;
+  height: inherit;
+}
+.container-home,.container-5,.container-4,.container-7{
+  padding: 40px var(--bs-gutter-x, 0.75rem) !important;
+  width: 100%;
+  height: auto;
+  height: inherit;
+  @media (min-width:576px){
+    width: 540px;
+  }
+  @media (min-width:768px){
+    width: 720px;
+  }
+  @media (min-width:992px){
+    width: 960px;
+  }
+  @media (min-width:1200px){
+    width: 1140px;
+  }
+  @media (min-width:1400px){
+    width: 1320px;
+  }
+  @media (max-width:768px){
+    padding: 20px var(--bs-gutter-x, 0.75rem) !important;
+  }
+  .menu-button{
+    @media (max-width:479px){
+      padding: 10px;
+    }
+  }
+}
+.container-5,.container-4,.container-7{
+  background-color: none !important;
+  padding: initial !important;
+}
+.myAccBtn{
+  @media (max-width:992px){
+    float: none !important;
+    margin-bottom: 10px;
+  }
+}
+
+.w-nav-link.w--current {
+  color: #81c2c0 !important;
+}
+
+.nav-menu .w-nav-link{
+  @media (max-width: 992px){
+    display: block;
+    width: 720px;
+  }
+  @media (max-width:768px){
+    width: 540px;
+  }
+  @media (max-width:576px){
+    width: 100%;
+  }
+}
+
+#header_logo {
+  z-index: 1;
+}
+
+#header {
+  box-shadow: 0px 4px 4px rgb(0 0 0 / 8%);
+}
+
+#footer {
+  position: relative;
+  //   position: absolute;
+  //   right: 0;
+  //   bottom: 0;
+  //   left: 0;
+  //   padding: 1rem;
+  // z-index: 500;
+}
+
+#react-confirm-alert{
+  .react-confirm-alert-body{
+    text-align: center;
+    font-family: "Manrope", sans-serif;
+    font-style: normal;
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 19px;
+    color: #003647;
+    width: 100%;
+    max-width: 500px;
+    h1{
+      font-family: "Barlow Condensed", sans-serif;
+      font-style: normal;
+      font-weight: 500;
+      font-size: 30px;
+      line-height: 36px;
+      letter-spacing: 0.02em;
+      color: #003647;
+    }
+    .react-confirm-alert-button-group{
+      align-items: center;
+      justify-content: center;
+      margin-top: 35px;
+      button{
+        background-color: #81c2c0;
+        font-family: "Barlow Condensed", sans-serif;
+        font-style: normal;
+        font-weight: 500;
+        font-size: 20px;
+        margin: auto 0.25rem;
+        padding: 0.375rem 1.35rem;
+        color: #fff;
+      }
+    }
+    @media (max-width: 992px){
+      max-width: 400px;
+    }
+    @media (max-width: 768px){
+      max-width: 350px;
+    }
+  }
+}
+
+/* CUSTOM STYLE SHEET FOR THE SCROLLBAR */
+
+/* width */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  background: white;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: darkgrey;
+  border-radius: 8px;
+}
+
+.highlight {
+  background-color: rgba(253, 232, 123, 1);
+}
+
+
+.col-md-4{
+  @media (min-width: 768px) {
+    width: 25% !important;
+  }
+}
+
+.col-md-8{
+  @media (min-width: 768px) {
+    width: 75% !important;
+  }
+}

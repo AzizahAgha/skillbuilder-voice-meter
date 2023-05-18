@@ -1,0 +1,35 @@
+## Build Environment ##
+
+FROM node:17-alpine as build
+#ENV NODE_ENV production
+
+WORKDIR /usr/src/app
+COPY package*.json ./
+RUN apk update && apk upgrade && apk add python3
+# RUN npm ci 
+RUN npm install
+#RUN npm cache clean --force
+# RUN npm install --force
+COPY . ./
+RUN npm run build
+
+
+
+## Production Environment ##
+FROM nginx:stable-alpine
+WORKDIR /var/www/skillbuilder-app
+
+COPY --from=build /usr/src/app /var/www/skillbuilder-app
+COPY /deploy_stage/nginx/nginx.conf /etc/nginx/conf.d/default.conf
+COPY start.sh /var/www/skillbuilder-app/start.sh
+
+RUN apk add --no-cache nodejs npm
+
+## Install Pm2 
+
+RUN npm install pm2 -g
+
+RUN chmod +x start.sh
+
+EXPOSE 3000
+ENTRYPOINT /bin/sh -x /var/www/skillbuilder-app/start.sh && nginx -g 'daemon off;' 

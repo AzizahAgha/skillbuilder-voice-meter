@@ -1,0 +1,170 @@
+trigger:
+- main
+
+variables:
+  dockerfilePath: 'docker/Dockerfile'
+  tag: '$(Build.BuildId)'
+
+
+stages:
+- stage: DevBuild
+  displayName: "Build and push the docker image to AWS dev registry"
+  jobs:
+  - job: BuildJob
+    steps:
+    - task: DockerInstaller@0
+      inputs:
+        dockerVersion: '17.09.0-ce'
+    - script: aws ecr get-login-password --region us-east-1  | docker login --username AWS --password-stdin $(ECR_URL)
+      displayName: "Authenticate with ECR"
+      env:
+        AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+        AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+
+#    - task: DownloadSecureFile@1
+#      name: environment
+#      inputs: 
+#        secureFile: '.env'
+#    - task: CmdLine@2
+#      inputs:
+#        script: 'cp $(environment.secureFilePath) $(Build.SourcesDirectory)'
+    
+    - task: CmdLine@2
+      inputs:
+        script: 'sed -ie "s/client/$(client_id)/g" $(Build.SourcesDirectory)/.env'
+    
+    - task: CmdLine@2
+      inputs:
+        script: 'sed -ie "s!webflow!$(webflow_url)!g" $(Build.SourcesDirectory)/.env'
+
+
+    - task: CmdLine@2
+      inputs:
+       script: 'sed -ie "s!url!$(BACKEND_URL)!g" $(Build.SourcesDirectory)/.env'   
+  
+    - task: CmdLine@2
+      inputs:
+       script: 'sed -ie "s!facebook!$(FACEBOOK_ID)!g" $(Build.SourcesDirectory)/.env'   
+ 
+
+    - task: Docker@2
+      inputs:
+        repository: $(ECR_URL)/skillbuilder-ui
+        command: 'buildAndPush'
+        Dockerfile: $(dockerfilePath)
+        buildContext: '$(Build.SourcesDirectory)'
+    
+    - task: CmdLine@2
+      inputs:
+        script: 'sed -ie "s/CONTAINER_TAG/$(Build.BuildId)/g" $(Build.SourcesDirectory)/docker/docker-compose.yml'   
+
+    - task: CopyFiles@2
+      inputs:
+        SourceFolder: '$(Build.SourcesDirectory)/docker'
+        Contents: '**'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)/docker'
+        CleanTargetFolder: true
+        OverWrite: true
+    
+  
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'frontend_yaml'
+        publishLocation: 'Container'
+    
+- stage: Stage
+  displayName: 'Stage Deployment'
+  dependsOn: DevBuild
+  condition: succeeded()
+  jobs:
+  - job: StageDeploy
+    steps:
+    - script: echo $(Build.BuildId)
+      name: echoTag
+    - script: aws ecr get-login-password --region us-east-1  | docker login --username AWS --password-stdin $(ECR_URL)
+      displayName: "Authenticate with ECR"
+      env:
+        AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+        AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+      
+    - task: DownloadBuildArtifacts@1
+      inputs:
+        buildType: 'current'
+        downloadType: 'single'
+        downloadPath: '$(System.ArtifactsDirectory)'
+    
+    - task: CopyFilesOverSSH@0
+      inputs:
+        sshEndpoint: 'staging server'
+        sourceFolder: '$(System.ArtifactsDirectory)/frontend_yaml/docker'
+        contents: '**'
+        targetFolder: '/home/ubuntu/skillbuilder-app'
+        readyTimeout: '20000'
+    
+    - task: SSH@0
+      inputs:
+        failOnStdErr: false
+        sshEndpoint: 'staging server'
+        runOptions: 'inline'
+        inline: |
+          cd /home/ubuntu/skillbuilder-app
+          sh ./helper/app.sh
+        readyTimeout: '20000'
+    
+    - task: CmdLine@2
+      inputs:
+        script: 'echo skillbuilder-frontend deployed'
+    
+    
+- stage: Prod
+  displayName: 'Prod Deployment'
+  dependsOn: Stage
+  condition: succeeded()
+  jobs:
+  - deployment: ProdDeploy
+    displayName: Production deployment
+    environment:
+      name: production
+      resourceType: VirtualMachine
+      resourceName: ip-172-31-81-132
+    strategy:
+     runOnce:
+      deploy:
+         steps:
+          - script: echo $(Build.BuildId)
+            name: echoTag
+          - script: aws ecr get-login-password --region us-east-1  | docker login --username AWS --password-stdin $(ECR_URL)
+            displayName: "Authenticate with ECR"
+            env:
+              AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+
+
+          - task: DownloadBuildArtifacts@1
+            inputs:
+              buildType: 'current'
+              downloadType: 'single'
+              downloadPath: '$(System.ArtifactsDirectory)'
+          
+          - task: CopyFilesOverSSH@0
+            inputs:
+              sshEndpoint: 'Live server'
+              sourceFolder: '$(System.ArtifactsDirectory)/frontend_yaml/docker'
+              contents: 'docker-compose.yml'
+              targetFolder: '/home/ubuntu/skillbuilder-app'
+              readyTimeout: '20000'
+          
+          - task: SSH@0
+            inputs:
+              failOnStdErr: false
+              sshEndpoint: 'Live server'
+              runOptions: 'inline'
+              inline: |
+                cd /home/ubuntu/skillbuilder-app
+                sh ./helper/app.sh
+              readyTimeout: '20000'
+          
+          - task: CmdLine@2
+            inputs:
+              script: 'echo Prod skillbuilder-frontend deployed'

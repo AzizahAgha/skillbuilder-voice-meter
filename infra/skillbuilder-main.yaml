@@ -1,0 +1,415 @@
+"AWSTemplateFormatVersion" : "2010-09-09"
+
+"Description" :  "This Template Deploys VPC with Public and private Subnets, Internet Gateway, a NAT gateway and two EC2 instance"
+
+Parameters:
+  # SSH access IP address range
+  SSHLocation: 
+    Description: The IP address range that can be used to SSH to the Bastion hosts
+    Type: String
+    MinLength: 9
+    MaxLength: 18
+    Default: 0.0.0.0/0
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the for x.x.x.x/x.
+
+   # EC2 key pair to be used
+  KeyName: 
+    Description: Name of an existing EC2 key pair to enable SSH access to the instances
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: skillbuilder
+    ConstraintDescription: must be the name of an existing EC2 KeyPair
+
+    # VPC block
+  VPCName:
+    Description: Please Enter the  name of your VPC
+    Type: String
+    Default: Skillbuilder_VPC
+
+    #VPC CIDR block
+  VpcCIDR:
+    Description: Please Enter the IP range ( CIDR Notation) for the VPC
+    Type: String
+    Default: 10.0.0.0/16
+
+  PublicSubnet1CIDR:
+    Description: Please Enter the IP range ( CIDR Notation ) for Public Subnet in the first Avalibility Zone
+    Type: String
+    Default: 10.0.1.0/24
+
+  PublicSubnet2CIDR:
+    Description: Please Enter the IP range ( CIDR Notation ) for Public Subnet in the second Avalibility Zone
+    Type: String
+    Default: 10.0.2.0/24
+  
+  PrivateSubnet1CIDR:
+    Description: Please Enter the IP range ( CIDR Notation ) for Private Subnet in the first Avalibility Zone
+    Type: String
+    Default: 10.0.3.0/24
+
+  PrivateSubnet2CIDR:
+    Description: Please Enter the IP range ( CIDR Notation ) for Private Subnet in the second Avalibility Zone
+    Type: String
+    Default: 10.0.4.0/24
+
+  InstanceType:
+    Description: Jenkins instance for the CI/CD pipeline
+    Type: String
+    Default: t3.micro
+    AllowedValues : 
+    - t3.micro
+    - t3.small
+    - t3.medium
+    ConstraintDescription : Must be a valid EC2 instance type
+
+  InstanceType1:
+    Description: APP instance for simplicapital
+    Type: String
+    Default: t3.micro
+    AllowedValues : 
+    - t3.micro
+    - t3.small
+    - t3.medium
+    ConstraintDescription : Must be a valid EC2 instance type
+
+Resources:
+
+  # VPC
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+        CidrBlock: !Ref VpcCIDR
+        EnableDnsHostnames: true
+        EnableDnsSupport: true
+        Tags: 
+        - Key: Name
+          Value: Skillbuilder VPC
+
+  #Internet Gateway
+  MyInternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties: 
+      Tags:
+        - Key: Name
+          Value: Internet Gateway
+        - Key: Network
+          Value: Public
+  
+  #Attach Gateway to VPC
+  GatewayToInternet:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties: 
+      InternetGatewayId: !Ref MyInternetGateway
+      VpcId: !Ref VPC
+
+  # creating public subnets
+  PublicSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties: 
+      VpcId: !Ref VPC
+      AvailabilityZone: eu-north-1a
+      CidrBlock: !Ref PublicSubnet1CIDR
+      MapPublicIpOnLaunch: True
+      Tags: 
+        - Key: Name
+          Value: Public1 subnet (AZ1)
+
+  PublicSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties: 
+      VpcId: !Ref VPC
+      AvailabilityZone: eu-north-1b
+      CidrBlock: !Ref PublicSubnet2CIDR
+      MapPublicIpOnLaunch: True
+      Tags: 
+        - Key: Name
+          Value: Public1 subnet (AZ2)
+
+  # creating private subnets
+
+  PrivateSubnet1:
+    Type: 'AWS::EC2::Subnet'
+    Properties: 
+      VpcId: !Ref VPC
+      AvailabilityZone: eu-north-1a
+      CidrBlock: !Ref PrivateSubnet1CIDR
+      MapPublicIpOnLaunch: false
+      Tags: 
+        - Key: Name
+          Value: Private1 subnet (AZ1)
+
+  PrivateSubnet2:
+    Type: 'AWS::EC2::Subnet'
+    Properties: 
+      VpcId: !Ref VPC
+      AvailabilityZone: eu-north-1b
+      CidrBlock: !Ref PrivateSubnet2CIDR
+      MapPublicIpOnLaunch: false
+      Tags: 
+        - Key: Name
+          Value: Private2 subnet (AZ1)
+
+  #creating route table for public subnet
+
+  PublicRouteTable1:
+    Type: 'AWS::EC2::RouteTable'
+    Properties: 
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: Public1 Route
+        - Key: Network
+          Value: Public
+
+  PublicRoute1:
+    Type: 'AWS::EC2::Route'
+    DependsOn: GatewayToInternet
+    Properties:
+      RouteTableId: !Ref PublicRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref MyInternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+        RouteTableId: !Ref PublicRouteTable1
+        SubnetId: !Ref PublicSubnet1
+
+  PublicRouteTable2:
+    Type: 'AWS::EC2::RouteTable'
+    Properties: 
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: Public2 Route
+        - Key: Network
+          Value: Public
+
+  PublicRoute2:
+    Type: 'AWS::EC2::Route'
+    DependsOn: GatewayToInternet
+    Properties:
+      RouteTableId: !Ref PublicRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref MyInternetGateway
+
+  PublicSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+        RouteTableId: !Ref PublicRouteTable2
+        SubnetId: !Ref PublicSubnet2
+
+
+   #creating private subnet routing
+  
+  PrivateRouteTable1:
+    Type: 'AWS::EC2::RouteTable'
+    Properties: 
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: Private1 Route
+        - Key: Network
+          Value: Private
+
+  PrivateRoute1:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref MyInternetGateway
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+        RouteTableId: !Ref PrivateRouteTable1
+        SubnetId: !Ref PrivateSubnet1
+
+
+  PrivateRouteTable2:
+    Type: 'AWS::EC2::RouteTable'
+    Properties: 
+      VpcId: !Ref VPC
+      Tags: 
+        - Key: Name
+          Value: Private2 Route
+        - Key: Network
+          Value: Private
+
+  PrivateRoute2:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref MyInternetGateway
+
+  PrivateSubnet2RouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+        RouteTableId: !Ref PrivateRouteTable2
+        SubnetId: !Ref PrivateSubnet2
+
+#creating Jenkins EC2 instance
+
+  Jenkinsinstance:
+    Type: 'AWS::EC2::Instance'
+    Properties: 
+        InstanceType:
+          Ref: InstanceType
+        KeyName:
+          Ref: KeyName
+        DisableApiTermination: True
+        ImageId: 'ami-092cce4a19b438926'
+        SubnetId: 
+          Ref: PublicSubnet1
+        PrivateIpAddress: 10.0.1.65
+        SecurityGroupIds:
+          - !Ref JenkinsSecurityGroup
+        Tags:
+          - Key: Name 
+            Value: Ec2-_jenkins_instance
+        BlockDeviceMappings:
+          - DeviceName:  /dev/sda1
+            Ebs:
+              VolumeSize: 50
+
+  EIPjenkins:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref Jenkinsinstance
+
+  #creating App EC2 instance
+
+  Appinstance:
+    Type: 'AWS::EC2::Instance'
+    Properties: 
+        InstanceType:
+          Ref: InstanceType1
+        KeyName:
+          Ref: KeyName
+        DisableApiTermination: True
+        ImageId: 'ami-092cce4a19b438926'
+        SubnetId: 
+          Ref: PublicSubnet2
+        PrivateIpAddress: 10.0.2.65
+        SecurityGroupIds:
+          - !Ref AppSecurityGroup
+        Tags:
+          - Key: Name 
+            Value: Ec2_APP_INSTANCE
+         BlockDeviceMappings:
+          - DeviceName:  /dev/sda1
+            Ebs:
+              VolumeSize: 50
+
+  EIPApp:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref Appinstance
+
+
+  #creating security group for jenkins
+
+  JenkinsSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: "Internet Group For Jenkins Server"
+      GroupDescription: "SSH and web traffic in, all traffic out."
+      VpcId: 
+        Ref: VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: tcp 
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHLocation
+
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+  #creating Security group for App instance
+  AppSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: "Internet Group For APP Server"
+      GroupDescription: "SSH and web traffic in, all traffic out."
+      VpcId: 
+        Ref: VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+        - IpProtocol: tcp 
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SSHLocation
+
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+Outputs:
+  VPC:
+    Description: The reference to the Created VPC
+    Value: !Ref VPC
+    Export: 
+      Name: !Sub '${AWS::StackName}-VPC'
+
+  PublicSubnet1:
+    Description: The List of Public Subnet
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet1'
+  
+  PublicSubnet2:
+    Description: The List of Public Subnet
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnet2'
+
+
+  PrivateSubnet1:
+    Description: The List of private Subnet
+    Value: !Ref PrivateSubnet1
+    Export: 
+      Name: !Sub '${AWS::StackName}-PrivateSubnet1'
+
+  PrivateSubnet2:
+    Description: The List of private Subnet
+    Value: !Ref PrivateSubnet2
+    Export: 
+      Name: !Sub '${AWS::StackName}-PrivateSubnet2'
+
+  JenkinsPublicIp:
+    Value:
+      Ref: Jenkinsinstance
+    Description: Jenkins Instance Created Successfully
+
+  AppPublicIP:
+    Value:
+      Ref: Appinstance
+    Description: App Instance Created Successfully

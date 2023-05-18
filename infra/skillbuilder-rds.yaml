@@ -1,0 +1,160 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: The template Creates a RDS instance for Postgres Database 13.4
+
+Metadata:
+  AWS::CloudFormation::Interface: 
+    ParameterGroups:
+      -
+        Label:
+          Default: Export VPC Stack Name
+          Parameters: 
+            - ExportVpcStackName
+
+      - Label:
+          Default: Database Parameters
+          Parameters: 
+            - DatabaseInstanceIdentifier
+            - DatabaseName
+            - DatabaseUser
+            - DatabasePassword
+            - DatabaseBackupRetentionPeriod
+            - DBEngineVersion
+            - DatabaseAllocatedStorage
+            - DatabaseInstanceClass
+            - MultiAZDatabase
+
+Parameters:
+  ExportVpcStackName:
+    Description: The name of the vpc stack that exports values
+    Type: String
+
+  DatabaseInstanceIdentifier:
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters
+    Default: PostgresDB
+    Description: Instance identifier name
+    MaxLength: 60
+    MinLength: 1
+    Type: String
+
+  DatabaseName:
+   # AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    #ConstraintDescription: Must begin with a letter and contain only alphanumeric characters
+    Default: d1
+    Description: Postgres database name
+    MaxLength: 64
+    MinLength: 1
+    Type: String
+
+  DatabaseUser:
+    #AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    #ConstraintDescription: Must begin with a letter and contain only alphanumeric characters
+    Default: postgres
+    Description: Username for Postgres database access
+    MaxLength: 16
+    MinLength: 1
+    NoEcho: true
+    Type: String
+
+  DatabasePassword:
+   # AllowedPattern: '[a-zA-Z0-9]*'
+   # ConstraintDescription: Must contain only alphanumeric characters
+    Default: zYSk82rXFSyVQB9q
+    Description: Password for Postgres database access
+    MaxLength: 41
+    MinLength: 8
+    NoEcho: true
+    Type: String
+
+  DatabaseBackupRetentionPeriod:
+    ConstraintDescription: Database backup retention period must be between 0 and 35 days
+    Default: 0
+    Description: The number of days for which automatic DB snapshots are retained
+    MaxValue: 35
+    MinValue: 0
+    Type: Number
+
+  DBEngineVersion:
+    Description: 'PostgreSQL version.'
+    Type: String
+    Default: '13.4'
+    AllowedValues: ['11.1', '11.2', '11.4', '11.5', '11.6', '11.7', '11.8', '11.9', '12.2', '12.3', '12.4', '13.2', '13.3', '13.4', '13.5']
+  
+  DatabaseAllocatedStorage:
+    ConstraintDescription: Must be between 5 and 1024Gb
+    Default: 20
+    Description: The size of the database (Gb)
+    MaxValue: 65536
+    MinValue: 5
+    Type: Number
+
+  DatabaseInstanceClass:
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t2.micro
+      - db.m1.small
+      - db.m1.medium
+      - db.m1.large
+    ConstraintDescription: Must select a valid database instance type
+    Default: db.t3.micro
+    Description: The database instance type
+    Type: String
+
+  MultiAZDatabase:
+    AllowedValues:
+      - true
+      - false
+    ConstraintDescription: Must be either true or false
+    Default: false
+    Description: Creates a Multi-AZ Postgres Amazon RDS database instance
+    Type: String
+
+Resources:   
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for RDS database
+      SubnetIds: 
+        - Fn::ImportValue: !Sub ${ExportVpcStackName}Skillbuilder-main-PrivateSubnet1
+        - Fn::ImportValue: !Sub ${ExportVpcStackName}Skillbuilder-main-PrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: Database Subnet
+
+  DatabaseInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: !Ref DatabaseAllocatedStorage
+      AvailabilityZone: eu-north-1a
+      BackupRetentionPeriod: !Ref DatabaseBackupRetentionPeriod
+      DBInstanceClass: !Ref DatabaseInstanceClass
+      DBInstanceIdentifier: !Ref DatabaseInstanceIdentifier
+      DBName: !Ref DatabaseName
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      Engine: postgres
+      EngineVersion: !Ref DBEngineVersion
+      MasterUsername: !Ref DatabaseUser
+      MasterUserPassword: !Ref DatabasePassword
+      MultiAZ: !Ref MultiAZDatabase
+      VPCSecurityGroups: 
+        - !Ref DatabaseSecurityGroup
+
+  DatabaseSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: "PostgresDB Security Group"
+      GroupDescription: "Security Group for DB"
+      VpcId: !ImportValue
+        'Fn::Sub': '${ExportVpcStackName}Skillbuilder-main-VPC'
+
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432 
+          CidrIp: 0.0.0.0/0
+
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0

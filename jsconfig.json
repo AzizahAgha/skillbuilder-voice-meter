@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "checkJs": false,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "target": "es2020",
+    "module": "es2015",
+    "baseUrl": ".",
+    "paths": {
+      "@styles/*": ["styles/*"],
+      "@public/*": ["public/*"],
+      "@components/*": ["components/*"],
+      "@ui-library/*": ["ui-library/*"],
+      "@layouts/*": ["layouts/*"],
+      "@contexts/*": ["contexts/*"],
+      "@utils/*": ["utils/*"],
+      "@services/*": ["services/*"],
+      "@transformers/*": ["transformers/*"],
+      "@hooks/*": ["hooks/*"]
+    }
+  },
+  "exclude": [
+    "dist",
+    "node_modules",
+    "build",
+    ".vscode",
+    ".next",
+    "coverage",
+    ".npm",
+    ".yarn"
+  ],
+  "typeAcquisition": {
+    "enable": true,
+    "include": [
+      "react",
+      "react-dom"
+    ]
+  }
+}
