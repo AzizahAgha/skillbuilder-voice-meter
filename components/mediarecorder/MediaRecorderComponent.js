@@ -499,7 +499,9 @@ const Recorder = ({
       /* handle the error */
       console.error(err);
     });
-
+	
+	
+ //----testing 2nd method if voice is audible
   // let volumeCallback = null;
   // let volumeInterval = null;
   // const volumeVisualizer = [document.querySelectorAll('.volume-visualizer')]
